@@ -7,11 +7,18 @@ authors = [
     { name = "chlghksgml01", email = "chlghksgml01@naver.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "mcp[cli]>=2.1.1",
+]
 
 [project.scripts]
-generateclassdiagram = "generateclassdiagram:main"
+generateclassdiagram = "generateclassdiagram.server:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
