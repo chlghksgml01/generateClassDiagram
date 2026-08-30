@@ -28,12 +28,15 @@ def parse_folder(folder_path):
                         interfaces.append(parent) 
 
                 modifiers = line[:match.start()].strip()
+                mod_tokens = modifiers.split()
                 parsed = ParsedClass(
                     name = match.group(2),
                     access_modifier = AccessModifier.from_keyword(modifiers),
                     kind = ClassKind(match.group(1)),
                     base_class = base_class,
-                    interfaces = interfaces
+                    interfaces = interfaces,
+                    is_abstract = "abstract" in mod_tokens,
+                    is_static = "static" in mod_tokens,
                 )
                 results.append(parsed)
     return results
