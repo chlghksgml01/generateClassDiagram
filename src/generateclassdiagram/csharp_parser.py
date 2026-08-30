@@ -9,9 +9,12 @@ def parse_folder(folder_path):
     file_paths = list(pathlib.Path(folder_path).rglob("*.cs"))
     for file_path in file_paths:
         text = file_path.read_text(encoding="utf-8")
+        current_top_class = None
         for line in text.splitlines():
             match = CLASS_RE.search(line)
             if match:
+                is_nested = bool(line) and line[0].isspace()
+                outer = current_top_class if is_nested else None
                 base_class = None
                 interfaces = []
                 after = line[match.end():].split("{", 1)[0].split(" where ", 1)[0].strip()
@@ -29,6 +32,7 @@ def parse_folder(folder_path):
 
                 modifiers = line[:match.start()].strip()
                 mod_tokens = modifiers.split()
+
                 parsed = ParsedClass(
                     name = match.group(2),
                     access_modifier = AccessModifier.from_keyword(modifiers),
@@ -37,8 +41,13 @@ def parse_folder(folder_path):
                     interfaces = interfaces,
                     is_abstract = "abstract" in mod_tokens,
                     is_static = "static" in mod_tokens,
+                    outer = outer,
                 )
                 results.append(parsed)
+
+                if not is_nested:
+                    current_top_class = match.group(2)
+
     return results
 
 # 테스트 코드
