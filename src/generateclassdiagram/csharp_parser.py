@@ -3,7 +3,7 @@ import re
 from generateclassdiagram.model import ParsedClass, ClassKind, AccessModifier
 
 CLASS_RE = re.compile(r'\b(class|interface|struct|enum)\s+(\w+)')
-
+# 상속 / interface 나타내려면 class 이름 뒤에 : 를 찾아내야함
 def parse_folder(folder_path):
     results = []
     file_paths = list(pathlib.Path(folder_path).rglob("*.cs"))
@@ -11,11 +11,29 @@ def parse_folder(folder_path):
         text = file_path.read_text(encoding="utf-8")
         for line in text.splitlines():
             match = CLASS_RE.search(line)
-            if match:                
+            if match:
+                base_class = None
+                interfaces = []
+                after = line[match.end():].split("{", 1)[0].split(" where ", 1)[0].strip()
+                if after.startswith(":"):
+                    parts = [p.strip() for p in after[1:].split(",") if p.strip()]
+                else:
+                    parts = [] 
+                for parent in parts:
+                    if re.match(r'I[A-Z]', parent):
+                        interfaces.append(parent)
+                    elif base_class is None:
+                        base_class = parent
+                    else:
+                        interfaces.append(parent) 
+
+                modifiers = line[:match.start()].strip()
                 parsed = ParsedClass(
                     name = match.group(2),
-                    access_modifier = AccessModifier.PRIVATE,
+                    access_modifier = AccessModifier.from_keyword(modifiers),
                     kind = ClassKind(match.group(1)),
+                    base_class = base_class,
+                    interfaces = interfaces
                 )
                 results.append(parsed)
     return results
