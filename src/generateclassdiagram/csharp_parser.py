@@ -2,6 +2,12 @@ import pathlib
 import re
 from generateclassdiagram.model import ParsedClass, ClassKind, AccessModifier
 
+import tree_sitter_c_sharp as tscs
+from tree_sitter import Language, Parser
+
+CS_LANGUAGE = Language(tscs.language())
+parser = Parser(CS_LANGUAGE)
+
 CLASS_RE = re.compile(r'\b(class|interface|struct|enum)\s+(\w+)')
 # 상속 / interface 나타내려면 class 이름 뒤에 : 를 찾아내야함
 def parse_folder(folder_path):
@@ -50,9 +56,16 @@ def parse_folder(folder_path):
 
     return results
 
+def dump(n, d = 0):
+    print("  " * d + n.type + (f'  {n.text.decode()!r}' if n.child_count == 0 else ""))
+    for i, c in enumerate(n.children):
+        f = n.field_name_for_child(i)
+        if f: print("  " * (d + 1) + f"<field = {f}>")
+        dump(c, d + 1)
+
 # 테스트 코드
 if __name__ == "__main__":
-    classes = parse_folder(r"C:\UnityProjects\BlockPuzzle\Assets\1.Scripts\Editor\AIBalanceReview")
-    for c in classes:
-        print(c)
-    print(f"총 {len(classes)}개")
+    src = pathlib.Path(r"C:\UnityProjects\BlockPuzzle\Assets\1.Scripts\Editor\AIBalanceReview\MissionSummaryExtractor.cs")
+    tree = parser.parse(src.read_bytes())
+    dump(tree.root_node)
+
