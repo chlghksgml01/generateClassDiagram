@@ -8,53 +8,6 @@ from tree_sitter import Language, Parser
 CS_LANGUAGE = Language(tscs.language())
 parser = Parser(CS_LANGUAGE)
 
-CLASS_RE = re.compile(r'\b(class|interface|struct|enum)\s+(\w+)')
-# 상속 / interface 나타내려면 class 이름 뒤에 : 를 찾아내야함
-def parse_folder(folder_path):
-    results = []
-    file_paths = list(pathlib.Path(folder_path).rglob("*.cs"))
-    for file_path in file_paths:
-        text = file_path.read_text(encoding="utf-8")
-        current_top_class = None
-        for line in text.splitlines():
-            match = CLASS_RE.search(line)
-            if match:
-                is_nested = bool(line) and line[0].isspace()
-                outer = current_top_class if is_nested else None
-                base_class = None
-                interfaces = []
-                after = line[match.end():].split("{", 1)[0].split(" where ", 1)[0].strip()
-                if after.startswith(":"):
-                    parts = [p.strip() for p in after[1:].split(",") if p.strip()]
-                else:
-                    parts = [] 
-                for parent in parts:
-                    if re.match(r'I[A-Z]', parent):
-                        interfaces.append(parent)
-                    elif base_class is None:
-                        base_class = parent
-                    else:
-                        interfaces.append(parent) 
-
-                modifiers = line[:match.start()].strip()
-                mod_tokens = modifiers.split()
-
-                parsed = ParsedClass(
-                    name = match.group(2),
-                    access_modifier = AccessModifier.from_keyword(modifiers),
-                    kind = ClassKind(match.group(1)),
-                    base_class = base_class,
-                    interfaces = interfaces,
-                    is_abstract = "abstract" in mod_tokens,
-                    is_static = "static" in mod_tokens,
-                    outer = outer,
-                )
-                results.append(parsed)
-
-                if not is_nested:
-                    current_top_class = match.group(2)
-
-    return results
 
 def dump(n, d = 0):
     print("  " * d + n.type + (f'  {n.text.decode()!r}' if n.child_count == 0 else ""))
@@ -63,9 +16,82 @@ def dump(n, d = 0):
         if f: print("  " * (d + 1) + f"<field = {f}>")
         dump(c, d + 1)
 
+
+DECL_KINDS = {
+    "class_declaration": ClassKind.CLASS,
+    "interface_declaration": ClassKind.INTERFACE,
+    "struct_declaration": ClassKind.STRUCT,
+    "enum_declaration": ClassKind.ENUM,
+}
+
+# C# 구문 트리에서 클래스, 인터페이스, 구조체, 열거형 선언 노드를 순회하며 반환하는 제너레이터 함수
+def _iter_decls(node):
+    for child in node.children:
+        if child.type in DECL_KINDS:
+            yield child
+        yield from _iter_decls(child)
+
+# C# 구문 트리에서 중첩 클래스/인터페이스/구조체/열거형의 바깥쪽 이름 찾아 반환하는 함수
+def _outer_name(node):
+    p = node.parent
+    while p is not None:
+        if p.type in DECL_KINDS:
+            return p.child_by_field_name("name").text.decode()
+        p = p.parent
+    return None
+
+# C# 구문 트리에서 상속받은 부모 클래스와 구현한 인터페이스 정보를 추출하는 함수
+def _split_bases(node, kind):
+    bn = next((c for c in node.children if c.type == "base_list"), None)
+    if bn is None or kind is ClassKind.ENUM:
+        return None, []
+    base_class, interfaces = None, []
+    for t in bn.named_children:
+        text = t.text.decode()
+        if re.match(r"I[A-Z]", text):
+            interfaces.append(text)
+        elif base_class is None:
+            base_class = text
+        else:
+            interfaces.append(text)
+    return base_class, interfaces
+
+def _to_parsed_classs(node):
+    kind = DECL_KINDS[node.type]
+    name = node.child_by_field_name("name").text.decode()
+    mods = [c.text.decode() for c in node.children if c.type == "modifier"]
+    base_class, interfaces = _split_bases(node, kind)
+
+    return ParsedClass(
+        name = name,
+        access_modifier = AccessModifier.from_keyword(" ".join(mods)),
+        kind = kind,
+        base_class = base_class,
+        interfaces = interfaces,
+        is_abstract = "abstract" in mods,
+        is_static = "static" in mods,
+        outer = _outer_name(node),
+    )
+
+# 폴더 내의 C# 파일 찾아서 파싱 후 클래스나 선언 정보 객체 목록으로 반환
+def parse_folder(folder_path):
+    results = []
+    for file_path in pathlib.Path(folder_path).rglob("*.cs"):
+        tree = parser.parse(file_path.read_bytes())
+        for decl in _iter_decls(tree.root_node):
+            results.append(_to_parsed_classs(decl))
+    return results
+
 # 테스트 코드
 if __name__ == "__main__":
-    src = pathlib.Path(r"C:\UnityProjects\BlockPuzzle\Assets\1.Scripts\Editor\AIBalanceReview\MissionSummaryExtractor.cs")
-    tree = parser.parse(src.read_bytes())
-    dump(tree.root_node)
-
+    folders = [
+        r"C:\UnityProjects\BlockPuzzle\Assets\1.Scripts\Editor\AIBalanceReview",
+        r"C:\UnityProjects\BlockPuzzle\Assets\1.Scripts\Editor",
+    ]
+    for f in folders:
+        parsed_classes = parse_folder(f)
+        # outer 및 name 기준 정렬 후 출력
+        parsed_classes.sort(key=lambda c: (c.outer or "", c.name))
+        print(f"=== Folder: {f} ===")
+        for c in parsed_classes:
+            print(c)
