@@ -7,7 +7,6 @@ class ClassKind(Enum):
     CLASS = "class"
     INTERFACE = "interface"
     STRUCT = "struct"
-    RECORD = "record"
     ENUM = "enum"
 
 _RELATION_SYMBOLS = {
