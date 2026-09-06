@@ -1,6 +1,6 @@
 import pathlib
 import re
-from generateclassdiagram.model import ParsedClass, ClassKind, AccessModifier
+from generateclassdiagram.model import ParsedClass, ClassKind, AccessModifier, Field, Property
 
 import tree_sitter_c_sharp as tscs
 from tree_sitter import Language, Parser
@@ -56,11 +56,95 @@ def _split_bases(node, kind):
             interfaces.append(text)
     return base_class, interfaces
 
+def _member_mods(node):
+    """선언/멤버 노드의 modifier 자식들을 문자열 리스트로(public, static, readonly, const ...)"""
+    return [c.text.decode() for c in node.children if c.type == "modifier"]
+
+def _iter_fields(decl_node):
+    """선언 노드 body 안의 field_declaration들을 Field 리스트로 변환.
+    'public int a, b;' 처럼 variable_declarator가 여러 개면 타입/수식어를 공유하며 각각 Field."""
+    body = decl_node.child_by_field_name("body")
+    if body is None:
+        return []
+
+    fields = []
+    for fd in body.named_children:
+        if fd.type != "field_declaration":
+            continue
+        
+        mods = _member_mods(fd)
+        access = AccessModifier.from_keyword(" ".join(mods))
+
+        var_decl = next((c for c in fd.children if c.type == "variable_declaration"), None)
+        if var_decl is None:
+            continue
+
+        type_node = var_decl.child_by_field_name("type")
+        type_str = type_node.text.decode() if type_node is not None else ""
+
+        for vd in var_decl.children:
+            if vd.type != "variable_declarator":
+                continue
+            name_node = vd.child_by_field_name("name")
+            if name_node is None:
+                continue
+            fields.append(Field(
+                name = name_node.text.decode(),
+                type = type_str,
+                access_modifier = access,
+                is_static = "static" in mods,
+                is_readonly = "readonly" in mods,
+                is_const = "const" in mods,
+            ))
+    return fields
+
+def _property_is_readonly(pd):
+    """읽기 전용 여부: '=> 식' 본문이거나, accessor에 set/init이 하나도 없으면 True"""
+    if any(c.type == "arrow_expression_clause" for c in pd.children):
+        return True
+    
+    acc_list = next((c for c in pd.children if c.type == "accessor_list"), None)
+    if acc_list is None:
+        return False
+
+    for acc in acc_list.children:
+        if acc.type != "accessor_declaration":
+            continue
+        if any(ch.type in ("set", "init") for ch in acc.children):
+            return False
+    return True
+
+def _iter_properties(decl_node):
+    """선언 노드 body 안의 property_declaration들을 Property 리스트로 변환"""
+    body = decl_node.child_by_field_name("body")
+    if body is None:
+        return []
+
+    props = []
+    for pd in body.named_children:
+        if pd.type != "property_declaration":
+            continue
+
+        mods = _member_mods(pd)
+        type_node = pd.child_by_field_name("type")
+        name_node = pd.child_by_field_name("name")
+        if type_node is None or name_node is None:
+            continue
+
+        props.append(Property(
+            name = name_node.text.decode(),
+            type = type_node.text.decode(),
+            access_modifier = AccessModifier.from_keyword(" ".join(mods)),
+            is_static = "static" in mods,
+            is_readonly = _property_is_readonly(pd),
+        ))
+    return props
+
 def _to_parsed_classs(node):
     """C# 구문 트리에서 이름, 접근 제어자, 상속 관계, 키워드 등의 정보를 추출해 ParsedClass 객체로 변환하는 함수"""
     kind = DECL_KINDS[node.type]
     name = node.child_by_field_name("name").text.decode()
-    mods = [c.text.decode() for c in node.children if c.type == "modifier"]
+    mods = _member_mods(node)
     base_class, interfaces = _split_bases(node, kind)
 
     return ParsedClass(
@@ -72,6 +156,8 @@ def _to_parsed_classs(node):
         is_abstract = "abstract" in mods,
         is_static = "static" in mods,
         outer = _outer_name(node),
+        fields = _iter_fields(node),
+        properties = _iter_properties(node),
     )
 
 _MAX_CS_FILES = 2000

@@ -21,18 +21,36 @@ def _mark(c: ParsedClass) -> str | None:
         return "static"
     return None
 
+def _member_lines(c: ParsedClass) -> list[str]:
+    """필드, 프로퍼티를 '<symbol><type> <name>' 멤버 줄로, static이면 끝에 $"""
+    lines = []
+    for f in c.fields:
+        s = f"        {f.access_modifier.symbol}{_safe(f.type)} {f.name}"
+        if f.is_static:
+            s += "$"
+        lines.append(s)
+    for p in c.properties:
+        s = f"        {p.access_modifier.symbol}{_safe(p.type)} {p.name}"
+        if p.is_static:
+            s += "$"
+        lines.append(s)
+    return lines
+
 
 def _declaration_lines(c: ParsedClass) -> list[str]:
-    """class 선언, << >> 표시 있으면 3줄, 없으면 1줄"""
+    """class 선언. << >> 표시나 멤버가 있으면 블록 형태({ }), 둘 다 없으면 한 줄"""
     name = _safe(c.name)
     mark = _mark(c)
-    if mark is None:
+    members = _member_lines(c)
+
+    if mark is None and not members:
         return [f"    class {name}"]
-    return [
-        f"    class {name} {{",
-        f"        <<{mark}>>",
-        "    }",
-    ]
+
+    body = []
+    if mark is not None:
+        body.append(f"        <<{mark}>>")
+    body += members
+    return [f"    class {name} {{", *body, "    }"]
 
 
 def _relation_lines(c: ParsedClass) -> list[str]:
