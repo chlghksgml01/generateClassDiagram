@@ -82,7 +82,7 @@ def parse_folder(folder_path):
     # 파일 수 상한 초과한 경우 예외 발생
     if len(files) > _MAX_CS_FILES:
         raise ValueError(
-            f"대상 폴더에 .cs 파일이 {len(files)}개 — 상한 {_MAX_CS_FILES} 초과 "
+            f"대상 폴더에 .cs 파일이 {len(files)}개 — 상한 {_MAX_CS_FILES} 초과"
         )
     results = []
     for file_path in files:
