@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "generateclassdiagram": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "c:\\generateClassDiagram",
+        "generateclassdiagram"
+      ],
+      "env": {
+        "GENERATECLASSDIAGRAM_ROOTS": "C:\\UnityProjects\\BlockPuzzle"
+      }
+    }
+  }
+}

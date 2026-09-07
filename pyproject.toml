@@ -1,17 +1,24 @@
 [project]
 name = "generateclassdiagram"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Ganerate Class Diagram"
 authors = [
     { name = "chlghksgml01", email = "chlghksgml01@naver.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
-
+dependencies = [
+    "mcp[cli]>=2.1.1",
+    "tree-sitter>=0.26.0",
+    "tree-sitter-c-sharp>=0.23.5",
+]
 [project.scripts]
-generateclassdiagram = "generateclassdiagram:main"
+generateclassdiagram = "generateclassdiagram.server:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
