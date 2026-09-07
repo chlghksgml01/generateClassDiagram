@@ -21,8 +21,8 @@ Claude Code에서 호출한 결과
 |---|---|
 | ![필드·프로퍼티 출력](docs/Images/image-7.png) | ![렌더링 결과](docs/Images/image-8.png) |
 
-경로 접근 범위를 벗어난 요청은 클라이언트가 읽을 수 있는 에러로 거부
-![허용 범위 밖 경로 차단 테스트](docs/Images/image-5.png)
+가드 테스트 결과
+![가드 테스트](docs/Images/image-5.png)
 
 `_MAX_CS_FILES`를 5로 설정해두고 파일 수 상한 테스트
 ![파일 수 상한 테스트](docs/Images/image-6.png)
@@ -51,7 +51,7 @@ server.py (MCP tool: generate_class_diagram)
 - **emitter.py**: `ParsedClass` 목록을 Mermaid `classDiagram` 문법 텍스트로 직렬화
 - **server.py**: MCP 도구 하나(`generate_class_diagram`) 노출, 경로 검증과 에러 번역 담당
 ---
-## 설계 포인트 — 경로 접근 범위
+## 경로 접근 범위
 
 MCP 도구의 `path` 인자는 사용자가 아니라 모델이 채우는 값이라 신뢰할 수 없는 입력임
 처음에는 `is_dir()` 검사만 있어서 `C:\Windows\System32` 같은 임의 경로도 그대로 순회함
@@ -112,7 +112,6 @@ claude mcp add generateclassdiagram --scope project -e GENERATECLASSDIAGRAM_ROOT
 ```
 - 평소 Claude Code를 열어서 쓸 폴더에서 실행(다이어그램 대상 프로젝트일 수도,
   이 서버 코드 자체일 수도, 그 외 아무 작업 폴더일 수도 있음 — 다이어그램 대상인지 여부와는 무관)
-- GENERATECLASSDIAGRAM_ROOTS: 서버가 허용하는 범위
 - .mcp.json 생성됨
 ```json
 {
@@ -137,7 +136,7 @@ claude mcp add generateclassdiagram --scope project -e GENERATECLASSDIAGRAM_ROOT
 
 Claude Code에서:
 
-> generate_class_diagram을 이용해 클래스 다이어그램 그려줘
+> generate_class_diagram을 이용해 "다이어그램뽑고싶은실제프로그램경로" 클래스 다이어그램 그려줘
 
 도구가 반환하는 텍스트 예시:
 
