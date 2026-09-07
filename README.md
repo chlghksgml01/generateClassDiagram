@@ -112,6 +112,7 @@ claude mcp add generateclassdiagram --scope project -e GENERATECLASSDIAGRAM_ROOT
 ```
 - 평소 Claude Code를 열어서 쓸 폴더에서 실행(다이어그램 대상 프로젝트일 수도,
   이 서버 코드 자체일 수도, 그 외 아무 작업 폴더일 수도 있음 — 다이어그램 대상인지 여부와는 무관)
+- GENERATECLASSDIAGRAM_ROOTS: 서버가 허용하는 범위
 - .mcp.json 생성됨
 ```json
 {
@@ -136,7 +137,7 @@ claude mcp add generateclassdiagram --scope project -e GENERATECLASSDIAGRAM_ROOT
 
 Claude Code에서:
 
-> generate_class_diagram을 이용해 `C:\path\to\your\project\Assets\Scripts\Editor` 폴더 클래스 다이어그램 그려줘
+> generate_class_diagram을 이용해 클래스 다이어그램 그려줘
 
 도구가 반환하는 텍스트 예시:
 
