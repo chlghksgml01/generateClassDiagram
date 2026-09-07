@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "generateclassdiagram": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--directory", "이서버코드위치", "generateclassdiagram"],
+      "env": {
+        "GENERATECLASSDIAGRAM_ROOTS": "다이어그램뽑고싶은실제프로그램경로"
+      }
+    }
+  }
+}
