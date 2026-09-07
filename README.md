@@ -80,7 +80,11 @@ MCP 도구의 `path` 인자는 사용자가 아니라 모델이 채우는 값이
 
 ## 기술 스택
 
-Python / MCP SDK / tree-sitter(`tree-sitter-c-sharp`) / uv / Mermaid
+- 언어: Python 3.14
+- MCP: 공식 Python SDK (mcp[cli])
+- 파싱: tree-sitter + tree-sitter-c-sharp
+- 패키징/실행: uv
+- 출력: Mermaid classDiagram
 
 ## 개발 기록
 
